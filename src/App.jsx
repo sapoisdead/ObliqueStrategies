@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Sparkles, RotateCw, Bookmark, BookmarkCheck, Volume2, VolumeX, 
-  Plus, Search, Info, Music, Compass, Feat, Layers, Share2, Download, Filter
+  Sparkles, Bookmark, BookmarkCheck, Volume2, VolumeX, 
+  Search, Compass, Download
 } from 'lucide-react';
 
 const OBLIQUE_CARDS = [
@@ -62,12 +62,11 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [favorites, setFavorites] = useState([]);
-  const [activeTab, setActiveTab] = useState('studio'); // 'studio', 'catalog', 'journal'
+  const [activeTab, setActiveTab] = useState('studio');
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [notes, setNotes] = useState({});
-  const [customCardText, setCustomCardText] = useState('');
   const [installPrompt, setInstallPrompt] = useState(null);
 
   const audioCtxRef = useRef(null);
@@ -92,7 +91,7 @@ export default function App() {
       const gain = ctx.createGain();
       
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(110, ctx.currentTime); // A2 tone
+      osc.frequency.setValueAtTime(110, ctx.currentTime);
       gain.gain.setValueAtTime(0.01, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.1);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
@@ -121,20 +120,6 @@ export default function App() {
     );
   };
 
-  const handleAddCustomCard = (e) => {
-    e.preventDefault();
-    if (!customCardText.trim()) return;
-    const newCard = {
-      id: Date.now(),
-      text: customCardText.trim(),
-      category: "Custom"
-    };
-    setDeck([newCard, ...deck]);
-    setCurrentIndex(0);
-    setCustomCardText('');
-    setIsFlipped(true);
-  };
-
   const handleInstallClick = () => {
     if (installPrompt) {
       installPrompt.prompt();
@@ -151,7 +136,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0F0E0C] text-[#E6DFD5] flex flex-col items-center justify-between p-4 selection:bg-[#C5A059] selection:text-black">
-      {/* Header */}
       <header className="w-full max-w-2xl flex items-center justify-between py-4 border-b border-[#3A332A]/60 mb-6">
         <div className="flex items-center space-x-3">
           <div className="w-9 h-9 rounded-full border border-[#C5A059] flex items-center justify-center bg-[#1A1815]">
@@ -182,9 +166,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="w-full max-w-2xl flex-1 flex flex-col justify-center items-center">
-        {/* Navigation Tabs */}
         <div className="flex space-x-4 mb-6 bg-[#161412] p-1.5 rounded-xl border border-[#3A332A]">
           <button 
             onClick={() => setActiveTab('studio')}
@@ -206,17 +188,13 @@ export default function App() {
           </button>
         </div>
 
-        {/* TAB 1: STUDIO (3D CARD FLIP EXPERIENCE) */}
         {activeTab === 'studio' && (
           <div className="flex flex-col items-center w-full max-w-sm">
-            {/* 3D Card Box */}
             <div 
               onClick={() => { setIsFlipped(!isFlipped); playSynthDrone(); }}
               className="w-full aspect-[3/5] relative perspective-1000 cursor-pointer group"
             >
               <div className={`w-full h-full duration-700 transform-style-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}>
-                
-                {/* CARD BACK (Engraved Pattern) */}
                 <div className="absolute inset-0 w-full h-full bg-[#1A1815] border-2 border-[#C5A059] rounded-2xl shadow-2xl p-6 flex flex-col justify-between backface-hidden">
                   <div className="w-full h-full border border-[#C5A059]/40 rounded-xl p-4 flex flex-col items-center justify-between bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:16px_16px]">
                     <div className="text-[#C5A059] text-xs font-cinzel tracking-widest">✦ OBLIQUE TAROT ✦</div>
@@ -228,7 +206,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* CARD FRONT (Parchment & Strategy) */}
                 <div className="absolute inset-0 w-full h-full bg-[#F4EBE1] text-[#1A1815] border-2 border-[#C5A059] rounded-2xl shadow-2xl p-6 flex flex-col justify-between rotate-y-180 backface-hidden">
                   <div className="flex justify-between items-center border-b border-[#C5A059]/40 pb-2">
                     <span className="font-cinzel text-xs font-bold tracking-wider text-[#9A7B39] uppercase">
@@ -257,11 +234,9 @@ export default function App() {
                     <span>PETER SCHMIDT</span>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* Studio Action Controls */}
             <div className="flex items-center justify-center space-x-4 mt-6 w-full">
               <button 
                 onClick={drawRandom}
@@ -274,10 +249,8 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: CATALOG */}
         {activeTab === 'catalog' && (
           <div className="w-full space-y-4">
-            {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute left-3 top-3 text-[#8A8175]" />
@@ -303,7 +276,6 @@ export default function App() {
               </select>
             </div>
 
-            {/* Grid List */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
               {filteredCatalog.map(card => (
                 <div key={card.id} className="bg-[#161412] border border-[#3A332A] hover:border-[#C5A059]/60 p-4 rounded-xl flex flex-col justify-between transition">
@@ -324,7 +296,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: SAVED & NOTES */}
         {activeTab === 'journal' && (
           <div className="w-full space-y-4">
             <h2 className="font-cinzel text-sm text-[#C5A059] uppercase tracking-wider font-semibold">Saved Favorites</h2>
@@ -357,7 +328,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="w-full max-w-2xl py-4 border-t border-[#3A332A]/60 text-center text-xs text-[#8A8175] mt-6">
         Designed for creative breakthroughs • Vintage Tarot Edition
       </footer>
