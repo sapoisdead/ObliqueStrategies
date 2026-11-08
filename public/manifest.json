@@ -1,0 +1,20 @@
+{
+  "short_name": "Oblique Tarot",
+  "name": "Oblique Strategies - Vintage Tarot Deck",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0F0E0C",
+  "theme_color": "#0F0E0C",
+  "display": "standalone"
+}
