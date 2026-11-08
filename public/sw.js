@@ -1,8 +1,8 @@
-const CACHE_NAME = 'oblique-tarot-v1';
+const CACHE_NAME = 'oblique-tarot-occult-v2';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/favicon.svg',
+  '/icon-512.png',
   '/manifest.json'
 ];
 

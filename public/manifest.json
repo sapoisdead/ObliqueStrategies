@@ -1,18 +1,19 @@
 {
   "short_name": "Oblique Tarot",
-  "name": "Oblique Strategies - Vintage Tarot Deck",
-  "description": "An interactive vintage tarot card deck inspired by Brian Eno and Peter Schmidt's Oblique Strategies for creative breakthroughs.",
+  "name": "Oblique Tarot - Esoteric Edition",
+  "description": "An interactive esoteric deck inspired by Brian Eno and Peter Schmidt's Oblique Strategies in a dark woodcut tarot style.",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "512x512"
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "start_url": "/",
   "scope": "/",
-  "background_color": "#0F0E0C",
-  "theme_color": "#0F0E0C",
+  "background_color": "#0A0908",
+  "theme_color": "#0A0908",
   "display": "standalone",
   "orientation": "portrait"
 }

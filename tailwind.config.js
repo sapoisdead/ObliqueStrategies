@@ -7,13 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        tarot: {
-          dark: '#0F0E0C',
-          card: '#F4EBE1',
+        occult: {
+          bg: '#0A0908',
+          card: '#12100E',
+          parchment: '#1C1815',
           gold: '#C5A059',
-          goldDark: '#9A7B39',
-          crimson: '#6B1D1D',
-          border: '#3A332A'
+          crimson: '#7A1C1C',
+          border: '#3D3226'
         }
       }
     },
