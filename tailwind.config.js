@@ -7,12 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        sanctum: {
-          bg: '#0A0908',
-          card: '#F4EBE1',
-          dark: '#1A1815',
-          gold: '#C5A059',
-          border: '#3D3226'
+        deck: {
+          bg: '#121110',
+          felt: '#1A1816',
+          card: '#EBE6DF',
+          cardDark: '#22201D',
+          gold: '#C5A059'
         }
       }
     },

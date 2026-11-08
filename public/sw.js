@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oblique-sanctum-v1';
+const CACHE_NAME = 'oblique-3d-deck-v1';
 const urlsToCache = [
   '/',
   '/index.html',

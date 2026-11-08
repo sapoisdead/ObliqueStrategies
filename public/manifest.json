@@ -1,7 +1,7 @@
 {
-  "short_name": "Oblique Sanctum",
-  "name": "Oblique Sanctum - Brian Eno Strategies",
-  "description": "Design-focused edition of Brian Eno and Peter Schmidt's Oblique Strategies for creative breakthroughs.",
+  "short_name": "Oblique 3D Deck",
+  "name": "Oblique Strategies - 3D Interactive Deck",
+  "description": "Realistic 3D tactile card deck experience for Brian Eno and Peter Schmidt's Oblique Strategies.",
   "icons": [
     {
       "src": "/icon-512.png",
@@ -12,8 +12,8 @@
   ],
   "start_url": "/",
   "scope": "/",
-  "background_color": "#0A0908",
-  "theme_color": "#0A0908",
+  "background_color": "#121110",
+  "theme_color": "#121110",
   "display": "standalone",
   "orientation": "portrait"
 }

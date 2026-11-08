@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Bookmark, BookmarkCheck, Volume2, VolumeX, BookOpen, Settings, Search, RefreshCw, Palette } from 'lucide-react';
+import { 
+  Layers, Volume2, VolumeX, Bookmark, BookmarkCheck, Search, 
+  Download, RefreshCw, Sparkles, Shuffle, Eye, ChevronRight
+} from 'lucide-react';
 
-const OBLIQUE_STRATEGIES = [
+const OBLIQUE_CARDS = [
   { id: 1, text: "Abandon normal instruments" },
   { id: 2, text: "Accept advice, but don't feel obligated to follow it" },
   { id: 3, text: "Accretion: collect small elements into a whole" },
@@ -55,16 +58,17 @@ const OBLIQUE_STRATEGIES = [
 ];
 
 export default function App() {
-  const [strategyIndex, setStrategyIndex] = useState(() => Math.floor(Math.random() * OBLIQUE_STRATEGIES.length));
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [activeTab, setActiveTab] = useState('sanctum');
-  const [favorites, setFavorites] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [deck, setDeck] = useState(OBLIQUE_CARDS);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [favorites, setFavorites] = useState([]);
+  const [activeTab, setActiveTab] = useState('3d-table'); // '3d-table', 'catalog', 'saved'
+  const [searchQuery, setSearchQuery] = useState('');
   const [installPrompt, setInstallPrompt] = useState(null);
 
-  const audioContextRef = useRef(null);
-  const gainNodeRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
   useEffect(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -73,59 +77,74 @@ export default function App() {
     });
   }, []);
 
-  const currentStrategy = OBLIQUE_STRATEGIES[strategyIndex];
+  const currentCard = deck[currentIndex];
 
-  const toggleAudio = () => {
-    if (audioEnabled) {
-      if (gainNodeRef.current) {
-        gainNodeRef.current.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 1.2);
-        setTimeout(() => setAudioEnabled(false), 1200);
+  // Synthesize realistic card slide sound
+  const playCardFlickSound = () => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
-    } else {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      const bufferSize = ctx.sampleRate * 0.09;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
       }
-      const ctx = audioContextRef.current;
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, ctx.currentTime);
+      filter.Q.setValueAtTime(2.5, ctx.currentTime);
+
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
 
-      const baseFreq = 77.78;
-      const voices = [baseFreq, baseFreq * 1.5, baseFreq * 1.25];
-
-      voices.forEach((freq, index) => {
-        const osc = ctx.createOscillator();
-        osc.type = index === 0 ? 'sine' : 'triangle';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        const voiceGain = ctx.createGain();
-        voiceGain.gain.setValueAtTime(index === 0 ? 0.08 : 0.04, ctx.currentTime);
-        osc.detune.setValueAtTime((Math.random() - 0.5) * 8, ctx.currentTime);
-        osc.connect(voiceGain);
-        voiceGain.connect(gain);
-        osc.start();
-      });
-
-      gainNodeRef.current = gain;
+      noise.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
-      gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 2.5);
-      setAudioEnabled(true);
+      noise.start();
+    } catch (e) {
+      console.log(e);
     }
   };
 
-  const showNextStrategy = () => {
-    setIsFlipped(true);
+  const drawNextCard = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    playCardFlickSound();
+
+    // Slide off animation sequence
     setTimeout(() => {
-      let nextIndex;
-      do {
-        nextIndex = Math.floor(Math.random() * OBLIQUE_STRATEGIES.length);
-      } while (nextIndex === strategyIndex);
-      setStrategyIndex(nextIndex);
       setIsFlipped(false);
-    }, 450);
+      setCurrentIndex((prev) => (prev + 1) % deck.length);
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+    }, 300);
+  };
+
+  const shuffleDeck = () => {
+    playCardFlickSound();
+    setIsFlipped(false);
+    setIsAnimating(true);
+    setTimeout(() => {
+      const shuffled = [...deck].sort(() => Math.random() - 0.5);
+      setDeck(shuffled);
+      setCurrentIndex(0);
+      setIsAnimating(false);
+    }, 400);
   };
 
   const toggleFavorite = (id) => {
     setFavorites(prev => 
-      prev.includes(id) ? prev.filter(favId => favId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
 
@@ -137,177 +156,211 @@ export default function App() {
     }
   };
 
-  const filteredStrategies = OBLIQUE_STRATEGIES.filter(s =>
-    s.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCatalog = deck.filter(c => c.text.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-[#0A0908] text-[#D8CEBE] flex flex-col items-center justify-between p-4 selection:bg-[#C5A059] selection:text-black">
-      <header className="w-full max-w-5xl flex items-center justify-between py-6 border-b border-[#3D3226] mb-8">
+    <div className="min-h-screen bg-[#121110] text-[#EBE6DF] flex flex-col items-center justify-between p-4 selection:bg-[#C5A059] selection:text-black">
+      {/* Header */}
+      <header className="w-full max-w-xl flex items-center justify-between py-4 border-b border-[#2A2724] mb-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded border-2 border-[#C5A059] flex items-center justify-center bg-[#12100E]">
-             <BookOpen className="w-5 h-5 text-[#C5A059]" />
+          <div className="w-8 h-8 rounded bg-[#1A1816] border border-[#C5A059] flex items-center justify-center">
+            <Layers className="w-4 h-4 text-[#C5A059]" />
           </div>
           <div>
-            <h1 className="font-['Playfair_Display'] text-2xl tracking-wider text-[#C5A059] font-black uppercase">Oblique Sanctum</h1>
-            <p className="text-xs text-[#8A7E6E] italic tracking-tight">Brian Eno & Peter Schmidt’s Prompts for Creative Action</p>
+            <h1 className="text-sm font-bold tracking-widest text-[#EBE6DF] uppercase">Oblique Deck 3D</h1>
+            <p className="text-[11px] text-[#8A8175]">Brian Eno & Peter Schmidt Strategies</p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
           <button 
-            onClick={toggleAudio} 
-            className={`p-3 rounded-lg border-2 transition-all ${audioEnabled ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/10' : 'border-[#3D3226] text-[#8A7E6E]'}`}
-            title="Toggle Ambient Drone"
+            onClick={() => setSoundEnabled(!soundEnabled)} 
+            className={`p-2 rounded border transition ${soundEnabled ? 'border-[#C5A059] text-[#C5A059] bg-[#C5A059]/10' : 'border-[#2A2724] text-[#8A8175]'}`}
+            title="Toggle Tactile Sounds"
           >
-            {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
           
           <button 
-            onClick={handleInstallClick}
-            className="px-4 py-2 rounded-lg border-2 border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black text-xs font-bold tracking-wider transition-colors flex items-center space-x-1"
+            onClick={handleInstallClick} 
+            className="px-3 py-1.5 rounded border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black text-xs font-semibold tracking-wide transition flex items-center space-x-1"
           >
-            <Settings className="w-4 h-4 mr-1" />
-            INSTALL
+            <Download className="w-3.5 h-3.5 mr-1" />
+            Install
           </button>
         </div>
       </header>
 
-      <main className="w-full max-w-5xl flex-1 flex flex-col justify-center items-center">
-        <div className="flex space-x-2 mb-10 bg-[#12100E] p-1.5 rounded-xl border-2 border-[#3D3226]">
+      {/* Main Experience */}
+      <main className="w-full max-w-xl flex-1 flex flex-col items-center justify-center">
+        {/* Navigation Switcher */}
+        <div className="flex space-x-2 mb-6 bg-[#1A1816] p-1 rounded-xl border border-[#2A2724]">
           <button 
-            onClick={() => setActiveTab('sanctum')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider transition ${activeTab === 'sanctum' ? 'bg-[#C5A059] text-black font-extrabold' : 'text-[#8A7E6E] hover:text-[#D8CEBE]'}`}
+            onClick={() => setActiveTab('3d-table')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wider transition ${activeTab === '3d-table' ? 'bg-[#C5A059] text-black font-bold' : 'text-[#8A8175] hover:text-[#EBE6DF]'}`}
           >
-            Sanctum (Drawing)
+            3D Deck Table
           </button>
           <button 
-            onClick={() => setActiveTab('grimoire')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider transition ${activeTab === 'grimoire' ? 'bg-[#C5A059] text-black font-extrabold' : 'text-[#8A7E6E] hover:text-[#D8CEBE]'}`}
+            onClick={() => setActiveTab('catalog')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wider transition ${activeTab === 'catalog' ? 'bg-[#C5A059] text-black font-bold' : 'text-[#8A8175] hover:text-[#EBE6DF]'}`}
           >
-            Grimoire (Database)
+            All Cards ({deck.length})
           </button>
           <button 
-            onClick={() => setActiveTab('archive')}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wider transition ${activeTab === 'archive' ? 'bg-[#C5A059] text-black font-extrabold' : 'text-[#8A7E6E] hover:text-[#D8CEBE]'}`}
+            onClick={() => setActiveTab('saved')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wider transition ${activeTab === 'saved' ? 'bg-[#C5A059] text-black font-bold' : 'text-[#8A8175] hover:text-[#EBE6DF]'}`}
           >
-            Favorites ({favorites.length})
+            Saved ({favorites.length})
           </button>
         </div>
 
-        {activeTab === 'sanctum' && (
-          <div className="flex flex-col items-center w-full max-w-md">
-            <div className="w-full aspect-[3/5] relative bg-[#F4EBE1] text-[#1A1815] p-8 border-[16px] border-[#1A1815] shadow-2xl rounded-2xl flex flex-col justify-between selection:bg-[#F4DAB3]">
-              <div className="absolute inset-3 border-2 border-[#1A1815] rounded-lg opacity-30 pointer-events-none"></div>
+        {/* TAB 1: REALISTIC 3D CARD DECK TABLE */}
+        {activeTab === '3d-table' && (
+          <div className="flex flex-col items-center w-full max-w-sm py-4">
+            
+            {/* 3D Perspective Table Setup */}
+            <div className="w-full aspect-[3/4.2] relative perspective-2000 flex items-center justify-center">
+              
+              {/* Stack effect layers beneath main card to simulate 3D deck depth */}
+              <div className="absolute w-[92%] h-[94%] bg-[#22201D] border border-[#3A3530] rounded-2xl shadow-xl transform translate-y-4 -rotate-3 opacity-60"></div>
+              <div className="absolute w-[95%] h-[96%] bg-[#1E1C1A] border border-[#3A3530] rounded-2xl shadow-2xl transform translate-y-2 rotate-2 opacity-80"></div>
+              <div className="absolute w-[97%] h-[98%] bg-[#1A1816] border border-[#3A3530] rounded-2xl shadow-2xl transform translate-y-1 -rotate-1"></div>
 
-              <div className="flex justify-between items-center z-10">
-                <span className="font-['Oswald'] text-xs text-[#524B40] tracking-widest uppercase font-black">
-                  Strategy nº {currentStrategy.id}
-                </span>
-                <div className="flex space-x-2">
-                    <button 
-                        onClick={() => toggleFavorite(currentStrategy.id)}
-                        className="text-[#1A1815] hover:scale-110 transition"
-                    >
-                        {favorites.includes(currentStrategy.id) ? (
-                        <BookmarkCheck className="w-5 h-5 fill-[#C5A059] text-[#C5A059]" />
-                        ) : (
-                        <Bookmark className="w-5 h-5" />
-                        )}
-                    </button>
-                    <button 
-                        onClick={showNextStrategy}
-                        className="text-[#1A1815] hover:rotate-90 transition-transform duration-300"
-                    >
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
+              {/* ACTIVE 3D FLIPPABLE CARD */}
+              <div 
+                onClick={() => { setIsFlipped(!isFlipped); playCardFlickSound(); }}
+                className={`w-[98%] h-[98%] relative cursor-pointer transform-style-3d transition-all duration-700 ease-out ${isFlipped ? 'rotate-y-180' : ''} ${isAnimating ? '-translate-x-full rotate-[-25deg] opacity-0' : 'translate-x-0 rotate-0 opacity-100'}`}
+              >
+                {/* BACK OF CARD (Deck Backing - Matte Dark Velvet with Gold Symbol) */}
+                <div className="absolute inset-0 w-full h-full bg-[#181614] border-4 border-[#2A2724] rounded-2xl p-6 flex flex-col justify-between backface-hidden shadow-2xl card-edge-depth">
+                  <div className="w-full h-full border-2 border-[#C5A059]/40 rounded-xl p-4 flex flex-col items-center justify-between bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:16px_16px]">
+                    <div className="text-[#C5A059] text-[10px] font-mono tracking-widest uppercase">✦ OBLIQUE DECK ✦</div>
+                    <div className="w-20 h-20 rounded-full border-2 border-[#C5A059] flex items-center justify-center relative bg-[#121110]">
+                      <div className="w-14 h-14 border border-[#C5A059]/60 rotate-45"></div>
+                      <Layers className="w-7 h-7 text-[#C5A059] absolute" />
+                    </div>
+                    <div className="text-[#8A8175] text-[11px] font-mono tracking-wider">TAP CARD TO REVEAL</div>
+                  </div>
                 </div>
+
+                {/* FRONT OF CARD (Classic Cream Card Stock) */}
+                <div className="absolute inset-0 w-full h-full bg-[#EBE6DF] text-[#111111] border-4 border-[#111111] rounded-2xl p-7 flex flex-col justify-between rotate-y-180 backface-hidden shadow-2xl">
+                  {/* Top metadata */}
+                  <div className="flex justify-between items-center border-b border-[#D4CEC5] pb-2 text-xs font-mono font-bold text-[#555555]">
+                    <span>CARD № {currentCard?.id}</span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(currentCard.id); }}
+                      className="text-[#111111] hover:scale-110 transition"
+                    >
+                      {favorites.includes(currentCard.id) ? (
+                        <BookmarkCheck className="w-5 h-5 fill-[#111111]" />
+                      ) : (
+                        <Bookmark className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Main strategy prompt text */}
+                  <div className="my-auto text-center px-2">
+                    <p className="text-xl sm:text-2xl font-bold leading-relaxed tracking-tight text-[#111111]">
+                      "{currentCard?.text}"
+                    </p>
+                  </div>
+
+                  {/* Bottom classic credits */}
+                  <div className="border-t border-[#D4CEC5] pt-2 flex justify-between items-center text-[10px] font-mono tracking-widest text-[#666666]">
+                    <span>BRIAN ENO</span>
+                    <span>PETER SCHMIDT</span>
+                  </div>
+                </div>
+
               </div>
 
-              <div className={`my-auto text-center px-4 transition-all duration-500 ${isFlipped ? 'opacity-0 scale-90 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
-                <p className="font-['Playfair_Display'] text-3xl md:text-4xl font-black leading-snug tracking-tight text-[#1A1815]">
-                  "{currentStrategy.text}"
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center justify-center space-y-1 border-t border-[#1A1815] pt-4 z-10 text-center">
-                <p className="font-['Oswald'] text-[10px] text-[#3D3226] tracking-[0.2em] font-black uppercase">BRIAN ENO / PETER SCHMIDT</p>
-                <div className="w-24 h-0.5 bg-[#1A1815] rounded-full opacity-40"></div>
-                <p className="text-[9px] text-[#8A7E6E] font-medium tracking-tight">Design Focused Edition</p>
-              </div>
             </div>
 
-            <div className="flex items-center space-x-3 mt-8 w-full">
+            {/* Tactile Control Panel */}
+            <div className="flex items-center justify-between w-full mt-6 space-x-3">
               <button 
-                onClick={showNextStrategy}
-                className="flex-1 bg-[#C5A059] hover:bg-[#D4AF67] text-black font-black py-3.5 px-6 rounded-xl shadow-xl transition-colors flex items-center justify-center space-x-2 text-sm tracking-wider"
+                onClick={drawNextCard}
+                className="flex-1 bg-[#C5A059] hover:bg-[#D4AF67] text-black font-bold py-3.5 px-6 rounded-xl shadow-lg transition flex items-center justify-center space-x-2 text-sm tracking-wider uppercase"
               >
-                <Sparkles className="w-5 h-5 mr-1" />
-                DRAW CREATIVE ACTION
+                <Sparkles className="w-4 h-4" />
+                <span>Draw Next Card</span>
               </button>
+
+              <button 
+                onClick={shuffleDeck}
+                className="p-3.5 bg-[#1A1816] hover:bg-[#252320] text-[#EBE6DF] border border-[#2A2724] rounded-xl transition"
+                title="Shuffle 3D Deck"
+              >
+                <Shuffle className="w-5 h-5 text-[#C5A059]" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-[#8A8175] mt-3">Tap card to flip over • Draw button slides top card</p>
+          </div>
+        )}
+
+        {/* TAB 2: CATALOG */}
+        {activeTab === 'catalog' && (
+          <div className="w-full space-y-4">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-3.5 text-[#8A8175]" />
+              <input 
+                type="text" 
+                placeholder="Search strategies in deck..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#1A1816] border border-[#2A2724] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#EBE6DF] focus:outline-none focus:border-[#C5A059]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 max-h-[50vh] overflow-y-auto pr-1">
+              {filteredCatalog.map(card => (
+                <div key={card.id} className="bg-[#1A1816] border border-[#2A2724] hover:border-[#C5A059]/60 p-3.5 rounded-xl flex items-center justify-between transition">
+                  <p className="text-sm font-medium text-[#EBE6DF] pr-3">"{card.text}"</p>
+                  <button onClick={() => toggleFavorite(card.id)} className="text-[#C5A059] shrink-0">
+                    {favorites.includes(card.id) ? (
+                      <BookmarkCheck className="w-5 h-5 fill-[#C5A059]" />
+                    ) : (
+                      <Bookmark className="w-5 h-5 text-[#8A8175] hover:text-[#C5A059]" />
+                    )}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {activeTab === 'grimoire' && (
-            <div className="w-full space-y-6">
-                <div className="relative">
-                    <Search className="w-5 h-5 absolute left-4 top-4 text-[#8A7E6E]" />
-                    <input 
-                        type="text" 
-                        placeholder="Search the grimoire database..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-[#12100E] border-2 border-[#3D3226] rounded-xl pl-12 pr-4 py-3 text-[#D8CEBE] focus:outline-none focus:border-[#C5A059]"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto pr-1">
-                    {filteredStrategies.map(strat => (
-                        <div key={strat.id} className="bg-[#12100E] p-5 rounded-xl border-2 border-[#3D3226] hover:border-[#C5A059] flex flex-col justify-between transition-colors">
-                            <p className="font-['Playfair_Display'] text-lg font-bold mb-3">"{strat.text}"</p>
-                            <div className="flex items-center justify-between text-xs text-[#8A7E6E]">
-                                <span>Action nº {strat.id}</span>
-                                <button onClick={() => toggleFavorite(strat.id)}>
-                                {favorites.includes(strat.id) ? (
-                                    <BookmarkCheck className="w-5 h-5 text-[#C5A059]" />
-                                ) : (
-                                    <Bookmark className="w-5 h-5 hover:text-[#D8CEBE]" />
-                                )}
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        {activeTab === 'archive' && (
-            <div className="w-full space-y-6">
-                <h2 className="font-['Playfair_Display'] text-2xl text-[#C5A059] uppercase tracking-widest font-black">Bookmarked Actions</h2>
-                {favorites.length === 0 ? (
-                    <div className="text-center bg-[#12100E] p-12 rounded-xl border-2 border-[#3D3226]">
-                        <Bookmark className="w-10 h-10 mx-auto mb-3 text-[#8A7E6E]" />
-                        <p className="text-sm font-medium text-[#8A7E6E]">Your list of favorite actions is empty. Bookmark strategies to view them here.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto pr-1">
-                        {OBLIQUE_STRATEGIES.filter(s => favorites.includes(s.id)).map(strat => (
-                            <div key={strat.id} className="bg-[#1A1815] p-6 rounded-xl border-2 border-[#C5A059] flex items-center justify-between">
-                                <p className="font-['Playfair_Display'] text-xl font-black text-[#F4EBE1]">"{strat.text}"</p>
-                                <button onClick={() => toggleFavorite(strat.id)} className="ml-4 shrink-0">
-                                    <BookmarkCheck className="w-6 h-6 text-[#C5A059]" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+        {/* TAB 3: SAVED CARDS */}
+        {activeTab === 'saved' && (
+          <div className="w-full space-y-4">
+            <h2 className="text-xs font-mono text-[#C5A059] uppercase tracking-wider font-bold">Saved Bookmarks</h2>
+            {favorites.length === 0 ? (
+              <div className="bg-[#1A1816] border border-[#2A2724] p-8 rounded-xl text-center text-[#8A8175]">
+                <Bookmark className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p>No saved cards yet. Tap the bookmark icon on any card to add it to your collection.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+                {deck.filter(c => favorites.includes(c.id)).map(card => (
+                  <div key={card.id} className="bg-[#EBE6DF] text-[#111111] p-4 rounded-xl flex items-center justify-between border-2 border-[#111111]">
+                    <p className="text-base font-bold">"{card.text}"</p>
+                    <button onClick={() => toggleFavorite(card.id)} className="text-[#111111] shrink-0 ml-3">
+                      <BookmarkCheck className="w-5 h-5 fill-[#111111]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </main>
 
-      <footer className="w-full max-w-5xl py-6 border-t border-[#3D3226] text-center text-xs text-[#8A7E6E] mt-8 font-medium tracking-wide">
-        Oblique Sanctum • Brian Eno & Peter Schmidt Strategies
+      {/* Footer */}
+      <footer className="w-full max-w-xl py-3 border-t border-[#2A2724] text-center text-[11px] text-[#8A8175] mt-4 font-mono">
+        Interactive 3D Oblique Strategies Deck
       </footer>
     </div>
   );
