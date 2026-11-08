@@ -19,12 +19,8 @@
 
 body {
   margin: 0;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Playfair Display', serif;
   background-color: #0A0908;
   color: #D8CEBE;
   overflow-x: hidden;
-}
-
-.font-cinzel {
-  font-family: 'Cinzel Decorative', serif;
 }

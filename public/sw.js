@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oblique-tarot-occult-v2';
+const CACHE_NAME = 'oblique-sanctum-v1';
 const urlsToCache = [
   '/',
   '/index.html',
